@@ -62,6 +62,11 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private LinearLayout linearLayout;
 
+    public enum DIRECTION {
+        LEFT, RIGHT;
+    }
+
+
     public float getmScaleRatio() {
         return mScaleRatio;
     }
@@ -430,6 +435,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this.mOnHorizontalScrollListener = mOnHorizontalScrollListener;
     }
 
+    protected onItemChangeListener mOnItemChangeListener = null;
+
+    public void setmOnItemChangeListener(onItemChangeListener mOnItemChangeListener) {
+        this.mOnItemChangeListener = mOnItemChangeListener;
+    }
+
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         VIEW_HEIGHT = r - l;
@@ -468,6 +479,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         scrollTo(ITEM_WIDTH, 0);
         refreshChildView();
+        if (mOnItemChangeListener != null) {
+            mOnItemChangeListener.onItemChange(DIRECTION.LEFT, false);
+        }
     }
 
     /**
@@ -486,6 +500,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         scrollTo(ITEM_WIDTH, 0);
         refreshChildView();
+        if (mOnItemChangeListener != null) {
+            mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, false);
+        }
     }
 
 
@@ -527,6 +544,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                         b[0] = b[mVisibleFunctionCount];
                         b[mVisibleFunctionCount + 1] = b[1];
                         itemsIndex = b;
+                        if (mOnItemChangeListener != null) {
+                            mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, true);
+                        }
                     } else {
                         scrollBy(-ITEM_WIDTH - upDiff, 0);
                         int[] b = new int[mVisibleFunctionCount + 2];
@@ -536,6 +556,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                         b[0] = b[mVisibleFunctionCount];
                         b[mVisibleFunctionCount + 1] = b[1];
                         itemsIndex = b;
+                        if (mOnItemChangeListener != null) {
+                            mOnItemChangeListener.onItemChange(DIRECTION.LEFT, true);
+                        }
                     }
                     scrollTo(ITEM_WIDTH, 0);
                 }
