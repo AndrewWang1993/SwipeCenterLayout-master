@@ -19,6 +19,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static java.lang.Math.abs;
+import static java.lang.Math.pow;
+import static java.lang.Math.sqrt;
+
 /**
  * Created by wangxiaoming on 2016/4/9 0009,10:32.
  */
@@ -60,6 +64,16 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private float mScaleRatio = 1.2f;
 
     private LinearLayout linearLayout;
+
+    private MotionEvent mMotionEvent;
+
+    public int getmVisibleFunctionCount() {
+        return mVisibleFunctionCount;
+    }
+
+    public void setmVisibleFunctionCount(int mVisibleFunctionCount) {
+        this.mVisibleFunctionCount = mVisibleFunctionCount;
+    }
 
     public enum DIRECTION {
         LEFT, RIGHT;
@@ -269,7 +283,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
 
-    public void refreshChildView() {
+    private void refreshChildView() {
         int childCount = linearLayout.getChildCount();
         if (childCount == 0) {
             for (int i : itemsIndex) {
@@ -437,6 +451,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this.mOnItemChangeListener = mOnItemChangeListener;
     }
 
+    protected onItemClickListener mOnItemClickListener = null;
+
+    public void setmOnItemClickListener(onItemClickListener mOnItemChangeListener) {
+        this.mOnItemClickListener = mOnItemChangeListener;
+    }
+
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         VIEW_HEIGHT = r - l;
@@ -498,12 +518,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 int diff = (originTouchX - x) / 3 * 2;
                 int nowOffset = getScrollX();
                 int offset = currentOffsetX - nowOffset;
-                // TODO: use mSlopeDistance can perform click item to select, but not recommend
-//                if (offset < mSlopeDistance) {
-//                    return false;
-//                }
                 originTouchX = x;
-                if (Math.abs(offset) < ITEM_WIDTH) {
+                if (abs(offset) < ITEM_WIDTH) {
                     scrollBy(diff, 0);
                     animation((float) (offset) / ITEM_WIDTH);
                 }
@@ -511,7 +527,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             case MotionEvent.ACTION_UP:
                 int upOffset = getScrollX();
                 int upDiff = upOffset - currentOffsetX;
-                if (Math.abs(upDiff) < ITEM_WIDTH / 3) {
+                if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY())) {
+                    processClick(event);
+                } else if (abs(upDiff) < ITEM_WIDTH / 3) {
                     smoothScrollBy(-upDiff, 0);
                 } else {
                     if (upDiff > 0) {
@@ -547,11 +565,93 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         itemsIndex = tmpIndex;
     }
 
+    private void resortArray(int index) {
+        int[] tmpIndex = new int[mVisibleFunctionCount + 2];
+        for (int i = 1; i <= mVisibleFunctionCount; i++) {
+            tmpIndex[i] = itemsIndex[(i + index - mVisibleFunctionCount / 2
+                    + mVisibleFunctionCount) % mVisibleFunctionCount];
+        }
+        tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
+        tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
+        itemsIndex = tmpIndex;
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         VIEW_WIDTH = w;
         VIEW_HEIGHT = h;
         super.onSizeChanged(w, h, oldw, oldh);
     }
+
+    // In order to obtain click event, we should check touch event moved distance
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+
+        switch (ev.getAction() & MotionEvent.ACTION_MASK) {
+            case MotionEvent.ACTION_DOWN:
+                mMotionEvent = MotionEvent.obtain(ev);
+                break;
+            default:
+                mMotionEvent = null;
+                break;
+        }
+        return super.onInterceptTouchEvent(ev);
+    }
+
+    private boolean checkMove(float x, float y, float oldX, float oldy) {
+        return sqrt(pow(abs(x - oldX), 2) + pow(abs(y - oldy), 2)) > mSlopeDistance;
+    }
+
+
+    private void processClick(MotionEvent ev) {
+        jumpToIndex((int) ev.getX() / ITEM_WIDTH);
+    }
+
+
+    /**
+     * Jump to specifics item
+     *
+     * @param index ranges from [0, {@link #mVisibleFunctionCount}]
+     */
+    public void jumpToIndex(int index) {
+        if (index != mVisibleFunctionCount / 2) {
+            resortArray(index);
+            if (mOnItemClickListener != null) {
+                mOnItemClickListener.onItemClick(index);
+            }
+        }
+    }
+
+
+    public interface OnHorizontalScrollListener {
+        /**
+         * Listener to get how many pixel are scrolled
+         *
+         * @param scrollDistanceX        The distance moved by X  since finger are down
+         * @param currentScrollPositionX total scroll distance of this view
+         */
+        void onHorizontalScroll(int scrollDistanceX, int currentScrollPositionX);
+    }
+
+    public interface onItemChangeListener {
+        /**
+         * Listener to identify which direction user swipe
+         *
+         * @param direction       swipe direction
+         * @param performedBySwip whether performed by user finger swipe
+         */
+        void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, boolean performedBySwip);
+    }
+
+    public interface onItemClickListener {
+        /**
+         * Listen finger click on item
+         *
+         * @param index the item finger clicked
+         */
+        void onItemClick(int index);
+    }
+
+
     // TODO: scroll by View page function
 }
