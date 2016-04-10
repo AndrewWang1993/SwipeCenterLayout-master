@@ -622,6 +622,19 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         }
     }
 
+    /**
+     * This function should under viewpager onPageScrolled listener and put positionOffset and positionOffsetPixels into param
+     *
+     * @param positionOffset       Value from [0, 1) indicating the offset from the page at position.
+     * @param positionOffsetPixels Value in pixels indicating the offset from position.
+     */
+    public void setScroll(int positionOffset, int positionOffsetPixels) {
+        positionOffset = positionOffsetPixels > 0 ? positionOffset : -positionOffset;
+        scrollBy(positionOffset * ITEM_WIDTH, 0);
+        resortArray(positionOffset > 0 ? DIRECTION.LEFT : DIRECTION.RIGHT);
+        refreshChildView();
+    }
+
 
     public interface OnHorizontalScrollListener {
         /**
