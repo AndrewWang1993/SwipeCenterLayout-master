@@ -3,7 +3,6 @@ package website.xiaoming.CenterSelectedSwipeLibrary;
 import android.content.Context;
 import android.graphics.Color;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -280,24 +279,22 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 f.setMinimumHeight(ITEM_WIDTH);
                 f.setMinimumHeight(ITEM_HEIGHT);
 
-                ImageView iv1 = new ImageView(mContext);
-                iv1.setTag(UNSELECT_ICON_TAG);
-                iv1.setImageResource(mUnSelectedIcons.get(i));
+                ImageView ivUnSelected = new ImageView(mContext);
+                ivUnSelected.setTag(UNSELECT_ICON_TAG);
+                ivUnSelected.setImageResource(mUnSelectedIcons.get(i));
                 if (i == itemsIndex.length / 2) {
-                    iv1.setVisibility(View.GONE);
+                    ivUnSelected.setVisibility(View.GONE);
                 }
 
-                ImageView iv2 = new ImageView(mContext);
-                iv2.setTag(SELECT_ICON_TAG);
-                iv2.setVisibility(View.GONE);
-                iv2.setImageResource(mSelectedIcons.get(i));
+                ImageView ivFocused = new ImageView(mContext);
+                ivFocused.setTag(SELECT_ICON_TAG);
+                ivFocused.setVisibility(View.GONE);
+                ivFocused.setImageResource(mSelectedIcons.get(i));
                 if (i == itemsIndex.length / 2) {
-                    iv2.setVisibility(View.VISIBLE);
-                    iv2.setScaleX(mScaleRatio);
-                    iv2.setScaleY(mScaleRatio);
+                    ivFocused.setVisibility(View.VISIBLE);
+                    ivFocused.setScaleX(mScaleRatio);
+                    ivFocused.setScaleY(mScaleRatio);
                 }
-
-
                 TextView tv = new TextView(mContext);
                 tv.setTag(CATALOG_TAG);
                 tv.setText(mCatalogs.get(i));
@@ -306,34 +303,33 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 FrameLayout.LayoutParams lp2 =
                         new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp1.gravity = Gravity.CENTER;
-                lp1.bottomMargin = ITEM_WIDTH / 6 - 10;
+                lp1.bottomMargin = ITEM_WIDTH / 6 - Util.dp2px(mContext, 3);
                 lp2.gravity = Gravity.CENTER;
-                lp2.topMargin = ITEM_WIDTH / 4 + 30;
+                lp2.topMargin = ITEM_WIDTH / 4 + Util.dp2px(mContext, 8);
 
-                f.addView(iv1, lp1);
-                f.addView(iv2, lp1);
+                f.addView(ivUnSelected, lp1);
+                f.addView(ivFocused, lp1);
                 f.addView(tv, lp2);
 
                 linearLayout.addView(f);
-
             }
         } else {
             for (int i = 0; i < childCount; i++) {
                 FrameLayout f = (FrameLayout) linearLayout.getChildAt(i);
-                ImageView iv1 = (ImageView) f.findViewWithTag(UNSELECT_ICON_TAG);
-                ImageView iv2 = (ImageView) f.findViewWithTag(SELECT_ICON_TAG);
+                ImageView ivUnSelected = (ImageView) f.findViewWithTag(UNSELECT_ICON_TAG);
+                ImageView ivFocused = (ImageView) f.findViewWithTag(SELECT_ICON_TAG);
                 TextView tv = (TextView) f.findViewWithTag(CATALOG_TAG);
-                iv1.setImageResource(mUnSelectedIcons.get(itemsIndex[i]));
-                iv1.setVisibility(View.VISIBLE);
-                iv2.setImageResource(mSelectedIcons.get(itemsIndex[i]));
-                iv2.setVisibility(View.GONE);
-                iv1.setAlpha(1f);
-                iv2.setAlpha(1f);
+                ivUnSelected.setImageResource(mUnSelectedIcons.get(itemsIndex[i]));
+                ivUnSelected.setVisibility(View.VISIBLE);
+                ivFocused.setImageResource(mSelectedIcons.get(itemsIndex[i]));
+                ivFocused.setVisibility(View.GONE);
+                ivUnSelected.setAlpha(1f);
+                ivFocused.setAlpha(1f);
                 if (i == childCount / 2) {
-                    iv1.setVisibility(View.GONE);
-                    iv2.setVisibility(View.VISIBLE);
-                    iv2.setScaleX(mScaleRatio);
-                    iv2.setScaleY(mScaleRatio);
+                    ivUnSelected.setVisibility(View.GONE);
+                    ivFocused.setVisibility(View.VISIBLE);
+                    ivFocused.setScaleX(mScaleRatio);
+                    ivFocused.setScaleY(mScaleRatio);
                 }
                 tv.setText(mCatalogs.get(itemsIndex[i]));
             }
@@ -468,15 +464,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      */
     public void next() {
         scrollBy(-ITEM_WIDTH, 0);
-
-        int[] b = new int[mVisibleFunctionCount + 2];
-        for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            b[i] = itemsIndex[(i + 1) % mVisibleFunctionCount];
-        }
-        b[0] = b[mVisibleFunctionCount];
-        b[mVisibleFunctionCount + 1] = b[1];
-        itemsIndex = b;
-
+        resortArray(DIRECTION.LEFT);
         scrollTo(ITEM_WIDTH, 0);
         refreshChildView();
         if (mOnItemChangeListener != null) {
@@ -489,15 +477,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      */
     public void previous() {
         scrollBy(ITEM_WIDTH, 0);
-
-        int[] b = new int[mVisibleFunctionCount + 2];
-        for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            b[i] = itemsIndex[(i - 1 + mVisibleFunctionCount) % mVisibleFunctionCount];
-        }
-        b[0] = b[mVisibleFunctionCount];
-        b[mVisibleFunctionCount + 1] = b[1];
-        itemsIndex = b;
-
+        resortArray(DIRECTION.RIGHT);
         scrollTo(ITEM_WIDTH, 0);
         refreshChildView();
         if (mOnItemChangeListener != null) {
@@ -518,7 +498,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 int diff = (originTouchX - x) / 3 * 2;
                 int nowOffset = getScrollX();
                 int offset = currentOffsetX - nowOffset;
-                // TODO: use mSlopeDistance can perform click item to select
+                // TODO: use mSlopeDistance can perform click item to select, but not recommend
 //                if (offset < mSlopeDistance) {
 //                    return false;
 //                }
@@ -536,28 +516,15 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 } else {
                     if (upDiff > 0) {
                         scrollBy(ITEM_WIDTH - upDiff, 0);
-
-                        int[] b = new int[mVisibleFunctionCount + 2];
-                        for (int i = 1; i <= mVisibleFunctionCount; i++) {
-                            b[i] = itemsIndex[(i + 1) % mVisibleFunctionCount];
-                        }
-                        b[0] = b[mVisibleFunctionCount];
-                        b[mVisibleFunctionCount + 1] = b[1];
-                        itemsIndex = b;
+                        resortArray(DIRECTION.LEFT);
                         if (mOnItemChangeListener != null) {
-                            mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, true);
+                            mOnItemChangeListener.onItemChange(DIRECTION.LEFT, true);
                         }
                     } else {
                         scrollBy(-ITEM_WIDTH - upDiff, 0);
-                        int[] b = new int[mVisibleFunctionCount + 2];
-                        for (int i = 1; i <= mVisibleFunctionCount; i++) {
-                            b[i] = itemsIndex[(i - 1 + mVisibleFunctionCount) % mVisibleFunctionCount];
-                        }
-                        b[0] = b[mVisibleFunctionCount];
-                        b[mVisibleFunctionCount + 1] = b[1];
-                        itemsIndex = b;
+                        resortArray(DIRECTION.RIGHT);
                         if (mOnItemChangeListener != null) {
-                            mOnItemChangeListener.onItemChange(DIRECTION.LEFT, true);
+                            mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, true);
                         }
                     }
                     scrollTo(ITEM_WIDTH, 0);
@@ -567,6 +534,17 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 break;
         }
         return true;
+    }
+
+    private void resortArray(DIRECTION direction) {
+        int[] tmpIndex = new int[mVisibleFunctionCount + 2];
+        for (int i = 1; i <= mVisibleFunctionCount; i++) {
+            tmpIndex[i] = itemsIndex[(i + (direction == DIRECTION.LEFT ? 1 : -1)
+                    + mVisibleFunctionCount) % mVisibleFunctionCount];
+        }
+        tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
+        tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
+        itemsIndex = tmpIndex;
     }
 
     @Override
