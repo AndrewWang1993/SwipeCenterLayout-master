@@ -5,7 +5,7 @@ import android.graphics.Point;
 import android.view.WindowManager;
 
 /**
- * Created by wangxiaoming on 2016/4/8 0008,10:51.
+ * Created by PeoceWang on 2016/4/8 0008,10:51.
  */
 public class Util {
     public static int getScreenWidth(Context context) {

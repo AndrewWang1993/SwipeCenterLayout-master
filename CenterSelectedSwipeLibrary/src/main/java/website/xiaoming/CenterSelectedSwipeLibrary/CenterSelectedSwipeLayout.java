@@ -2,6 +2,7 @@ package website.xiaoming.CenterSelectedSwipeLibrary;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.support.v4.view.ViewConfigurationCompat;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -24,13 +25,13 @@ import static java.lang.Math.pow;
 import static java.lang.Math.sqrt;
 
 /**
- * Created by wangxiaoming on 2016/4/9 0009,10:32.
+ * Created by PeoceWang on 2016/4/9 0009,10:32.
  */
 public class CenterSelectedSwipeLayout extends HorizontalScrollView implements View.OnTouchListener {
 
-    private Context mContext;
+    final private Context mContext;
 
-    private static final String UNSELECT_ICON_TAG = "un_selected_icon";
+    private static final String UNSELECTED_ICON_TAG = "un_selected_icon";
     private static final String SELECT_ICON_TAG = "selected_icon";
     private static final String CATALOG_TAG = "catalog";
 
@@ -67,24 +68,21 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private MotionEvent mMotionEvent;
 
-    public int getmVisibleFunctionCount() {
+
+    public int getVisibleFunctionCount() {
         return mVisibleFunctionCount;
     }
 
-    public void setmVisibleFunctionCount(int mVisibleFunctionCount) {
-        this.mVisibleFunctionCount = mVisibleFunctionCount;
-    }
-
     public enum DIRECTION {
-        LEFT, RIGHT;
+        LEFT, RIGHT
     }
 
 
-    public float getmScaleRatio() {
+    public float getScaleRatio() {
         return mScaleRatio;
     }
 
-    public void setmScaleRatio(float mScaleRatio) {
+    public void setScaleRatio(float mScaleRatio) {
         this.mScaleRatio = mScaleRatio;
     }
 
@@ -227,22 +225,29 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this(context, attrs, 0);
     }
 
-    public int getmBackGroundColor() {
+    public int getBackGroundColor() {
         return mBackGroundColor;
     }
 
-    public void setmBackGroundColor(int mBackGroundColor) {
+    public void setBackGroundColor(int mBackGroundColor) {
         this.mBackGroundColor = mBackGroundColor;
     }
 
     public CenterSelectedSwipeLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-
         mContext = context;
+        initSwiper();
+    }
+
+    private void initSwiper() {
+        setWillNotDraw(false);
+        setDescendantFocusability(FOCUS_AFTER_DESCENDANTS);
+
         SCREEN_WIDTH = Util.getScreenWidth(mContext);
         SCREEN_HEIGHT = Util.getScreenHeight(mContext);
 
-        mSlopeDistance = ViewConfiguration.getTouchSlop();
+        final ViewConfiguration configuration = ViewConfiguration.get(mContext);
+        mSlopeDistance = ViewConfigurationCompat.getScaledPagingTouchSlop(configuration);
 
         if (mUnSelectedIcons == null) {
 
@@ -284,7 +289,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
 
     private void refreshChildView() {
-        int childCount = linearLayout.getChildCount();
+        final int childCount = linearLayout.getChildCount();
         if (childCount == 0) {
             for (int i : itemsIndex) {
                 FrameLayout f = new FrameLayout(mContext);
@@ -294,7 +299,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 f.setMinimumHeight(ITEM_HEIGHT);
 
                 ImageView ivUnSelected = new ImageView(mContext);
-                ivUnSelected.setTag(UNSELECT_ICON_TAG);
+                ivUnSelected.setTag(UNSELECTED_ICON_TAG);
                 ivUnSelected.setImageResource(mUnSelectedIcons.get(i));
                 if (i == itemsIndex.length / 2) {
                     ivUnSelected.setVisibility(View.GONE);
@@ -330,7 +335,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         } else {
             for (int i = 0; i < childCount; i++) {
                 FrameLayout f = (FrameLayout) linearLayout.getChildAt(i);
-                ImageView ivUnSelected = (ImageView) f.findViewWithTag(UNSELECT_ICON_TAG);
+                ImageView ivUnSelected = (ImageView) f.findViewWithTag(UNSELECTED_ICON_TAG);
                 ImageView ivFocused = (ImageView) f.findViewWithTag(SELECT_ICON_TAG);
                 TextView tv = (TextView) f.findViewWithTag(CATALOG_TAG);
                 ivUnSelected.setImageResource(mUnSelectedIcons.get(itemsIndex[i]));
@@ -355,14 +360,14 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     protected void animation(float diff) {
         float fadeRation = diff * 1.6f;
         float showInRation = diff * 1.2f;
-        int centerItemIndex = mVisibleFunctionCount / 2 + 1;
+        final int centerItemIndex = mVisibleFunctionCount / 2 + 1;
 
         FrameLayout mid = (FrameLayout) linearLayout.getChildAt(centerItemIndex);
-        ImageView midIV1 = (ImageView) mid.findViewWithTag(UNSELECT_ICON_TAG);
+        ImageView midIV1 = (ImageView) mid.findViewWithTag(UNSELECTED_ICON_TAG);
         ImageView midIV2 = (ImageView) mid.findViewWithTag(SELECT_ICON_TAG);
         if (diff > 0) {             // right swipe animation
             FrameLayout left = (FrameLayout) linearLayout.getChildAt(centerItemIndex - 1);
-            ImageView leftIV1 = (ImageView) left.findViewWithTag(UNSELECT_ICON_TAG);
+            ImageView leftIV1 = (ImageView) left.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView leftIV2 = (ImageView) left.findViewWithTag(SELECT_ICON_TAG);
 
             midIV1.setVisibility(View.VISIBLE);
@@ -388,7 +393,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         } else {                      // left swipe animation
 
             FrameLayout right = (FrameLayout) linearLayout.getChildAt(centerItemIndex + 1);
-            ImageView rightIV1 = (ImageView) right.findViewWithTag(UNSELECT_ICON_TAG);
+            ImageView rightIV1 = (ImageView) right.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView rightIV2 = (ImageView) right.findViewWithTag(SELECT_ICON_TAG);
 
             midIV1.setVisibility(View.VISIBLE);
@@ -447,15 +452,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     protected onItemChangeListener mOnItemChangeListener = null;
 
-    public void setmOnItemChangeListener(onItemChangeListener mOnItemChangeListener) {
+    public void setOnItemChangeListener(onItemChangeListener mOnItemChangeListener) {
         this.mOnItemChangeListener = mOnItemChangeListener;
     }
 
-    protected onItemClickListener mOnItemClickListener = null;
-
-    public void setmOnItemClickListener(onItemClickListener mOnItemChangeListener) {
-        this.mOnItemClickListener = mOnItemChangeListener;
-    }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
@@ -508,16 +508,16 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        int x = (int) event.getX();
+        final int x = (int) event.getX();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 originTouchX = x;
                 currentOffsetX = getScrollX();
                 break;
             case MotionEvent.ACTION_MOVE:
-                int diff = (originTouchX - x) / 3 * 2;
-                int nowOffset = getScrollX();
-                int offset = currentOffsetX - nowOffset;
+                final int diff = (originTouchX - x) / 3 * 2;
+                final int nowOffset = getScrollX();
+                final int offset = currentOffsetX - nowOffset;
                 originTouchX = x;
                 if (abs(offset) < ITEM_WIDTH) {
                     scrollBy(diff, 0);
@@ -525,8 +525,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                int upOffset = getScrollX();
-                int upDiff = upOffset - currentOffsetX;
+                final int upOffset = getScrollX();
+                final int upDiff = upOffset - currentOffsetX;
                 if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY())) {
                     processClick(event);
                 } else if (abs(upDiff) < ITEM_WIDTH / 3) {
@@ -616,8 +616,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     public void jumpToIndex(int index) {
         if (index != mVisibleFunctionCount / 2) {
             resortArray(index);
-            if (mOnItemClickListener != null) {
-                mOnItemClickListener.onItemClick(index);
+            if (mOnItemChangeListener != null) {
+                mOnItemChangeListener.onItemClick(index);
             }
         }
     }
@@ -651,12 +651,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
          * Listener to identify which direction user swipe
          *
          * @param direction       swipe direction
-         * @param performedBySwip whether performed by user finger swipe
+         * @param performedBySwipe whether performed by user finger swipe
          */
-        void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, boolean performedBySwip);
-    }
+        void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, boolean performedBySwipe);
 
-    public interface onItemClickListener {
         /**
          * Listen finger click on item
          *
@@ -665,6 +663,21 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         void onItemClick(int index);
     }
 
+    /**
+     * Simple implementation of the {@link onItemChangeListener} interface with stub
+     * implementations of each method. Extend this if you do not intend to override
+     * every method of {@link onItemChangeListener}.
+     */
+    public static class SimpleOnItemChangeListener implements onItemChangeListener {
 
-    // TODO: scroll by View page function
+        @Override
+        public void onItemChange(DIRECTION direction, boolean performedBySwipe) {
+
+        }
+
+        @Override
+        public void onItemClick(int index) {
+
+        }
+    }
 }
