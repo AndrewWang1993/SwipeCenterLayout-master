@@ -68,6 +68,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private MotionEvent mMotionEvent;
 
+    private boolean isAlreadyMoveOutOfBoundary = false;
+
 
     public int getVisibleFunctionCount() {
         return mVisibleFunctionCount;
@@ -513,12 +515,14 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             case MotionEvent.ACTION_DOWN:
                 originTouchX = x;
                 currentOffsetX = getScrollX();
+                isAlreadyMoveOutOfBoundary = false;
                 break;
             case MotionEvent.ACTION_MOVE:
                 final int diff = (originTouchX - x) / 3 * 2;
                 final int nowOffset = getScrollX();
                 final int offset = currentOffsetX - nowOffset;
                 originTouchX = x;
+                isAlreadyMoveOutOfBoundary = isAlreadyMoveOutOfBoundary || checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY());
                 if (abs(offset) < ITEM_WIDTH) {
                     scrollBy(diff, 0);
                     animation((float) (offset) / ITEM_WIDTH);
@@ -527,7 +531,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             case MotionEvent.ACTION_UP:
                 final int upOffset = getScrollX();
                 final int upDiff = upOffset - currentOffsetX;
-                if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY())) {
+                if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY()) && !isAlreadyMoveOutOfBoundary) {
                     processClick(event);
                 } else if (abs(upDiff) < ITEM_WIDTH / 3) {
                     smoothScrollBy(-upDiff, 0);
@@ -549,6 +553,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 }
                 refreshChildView();
                 originTouchX = 0;
+                isAlreadyMoveOutOfBoundary = false;
                 break;
         }
         return true;
@@ -650,7 +655,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         /**
          * Listener to identify which direction user swipe
          *
-         * @param direction       swipe direction
+         * @param direction        swipe direction
          * @param performedBySwipe whether performed by user finger swipe
          */
         void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, boolean performedBySwipe);
