@@ -620,10 +620,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      */
     public void jumpToIndex(int index) {
         if (index != mVisibleFunctionCount / 2) {
-            resortArray(index);
             if (mOnItemChangeListener != null) {
-                mOnItemChangeListener.onItemClick(index);
+                mOnItemChangeListener.onItemClick(itemsIndex[index+1]-1);
             }
+            resortArray(index);
         }
     }
 
