@@ -10,6 +10,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.support.v4.view.ViewConfigurationCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -77,6 +78,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private boolean isAlreadyMoveOutOfBoundary = false;
 
+    boolean continueScrollFlag = false;
+
 
     public int getVisibleFunctionCount() {
         return mVisibleFunctionCount;
@@ -92,11 +95,22 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this.mBgShape = mBgShape;
     }
 
+    private final int FIX_COLOR = 255;
+
+    public boolean isAllowContinueScroll() {
+        return allowContinueScroll;
+    }
+
+    public void setAllowContinueScroll(boolean allowContinueScroll) {
+        this.allowContinueScroll = allowContinueScroll;
+    }
+
+    private boolean allowContinueScroll = true;
+
     public enum DIRECTION {
         LEFT, RIGHT
     }
 
-    private final int FIX_COLOR = 255;
 
     public enum CENTER_BG {
         CIRCLE(Color.parseColor("#6FB1E1")), RECTANGLE(Color.parseColor("#6FB1E1")), OVAL(Color.parseColor("#6FB1E1"));
@@ -281,7 +295,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         SCREEN_HEIGHT = Util.getScreenHeight(mContext);
 
         final ViewConfiguration configuration = ViewConfiguration.get(mContext);
-        mSlopeDistance = ViewConfigurationCompat.getScaledPagingTouchSlop(configuration)/2;   // FIX: when finger swipe wandering left and right, then return to near by, exception click error
+        mSlopeDistance = ViewConfigurationCompat.getScaledPagingTouchSlop(configuration) / 2;   // FIX: when finger swipe wandering left and right, then return to near by, exception click error
 
         if (mUnSelectedIcons == null) {
 
@@ -621,7 +635,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 isAlreadyMoveOutOfBoundary = false;
                 break;
             case MotionEvent.ACTION_MOVE:
-                final int diff = (originTouchX - x) / 3 * 2;
+                int diff;
+                if (allowContinueScroll) {
+                    diff = (originTouchX - x) / 4 * 3;  // If allow continue scroll we should increase move scale (actual move distance)/(view move distance)
+                } else {
+                    diff = (originTouchX - x) / 3 * 2;
+                }
                 final int nowOffset = getScrollX();
                 final int offset = currentOffsetX - nowOffset;
                 originTouchX = x;
@@ -629,6 +648,11 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 if (abs(offset) < ITEM_WIDTH) {
                     scrollBy(diff, 0);
                     animation((float) (offset) / ITEM_WIDTH);
+                } else if (allowContinueScroll && !continueScrollFlag) {    // allow continue move
+                    MotionEvent UpEvent = MotionEvent.obtain(event);
+                    UpEvent.setAction(MotionEvent.ACTION_UP);
+                    continueScrollFlag = true;
+                    onTouch(v, UpEvent);
                 }
                 break;
             case MotionEvent.ACTION_UP:
@@ -656,6 +680,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 }
                 refreshChildView();
                 originTouchX = 0;
+                if (allowContinueScroll && continueScrollFlag) {
+                    MotionEvent UpEvent = MotionEvent.obtain(event);
+                    UpEvent.setAction(MotionEvent.ACTION_DOWN);
+                    continueScrollFlag = false;
+                    onTouch(v, UpEvent);
+                    return true;
+                }
                 isAlreadyMoveOutOfBoundary = false;
                 break;
         }
