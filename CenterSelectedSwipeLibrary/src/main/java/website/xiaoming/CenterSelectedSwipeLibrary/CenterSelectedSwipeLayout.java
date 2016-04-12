@@ -10,7 +10,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
 import android.support.v4.view.ViewConfigurationCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -78,12 +77,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private boolean isAlreadyMoveOutOfBoundary = false;
 
-    boolean continueScrollFlag = false;
+    private boolean allowContinueScroll = true;
 
-
-    public int getVisibleFunctionCount() {
-        return mVisibleFunctionCount;
-    }
+    private boolean continueScrollFlag = false;
 
     private Bitmap mBitmap = null;
 
@@ -91,11 +87,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     public CENTER_BG mBgShape = CENTER_BG.CIRCLE;
 
-    public void setBgShape(CENTER_BG mBgShape) {
-        this.mBgShape = mBgShape;
-    }
-
     private final int FIX_COLOR = 255;
+
 
     public boolean isAllowContinueScroll() {
         return allowContinueScroll;
@@ -105,12 +98,19 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this.allowContinueScroll = allowContinueScroll;
     }
 
-    private boolean allowContinueScroll = true;
+    public int getVisibleFunctionCount() {
+        return mVisibleFunctionCount;
+    }
+
 
     public enum DIRECTION {
         LEFT, RIGHT
     }
 
+
+    public void setBgShape(CENTER_BG mBgShape) {
+        this.mBgShape = mBgShape;
+    }
 
     public enum CENTER_BG {
         CIRCLE(Color.parseColor("#6FB1E1")), RECTANGLE(Color.parseColor("#6FB1E1")), OVAL(Color.parseColor("#6FB1E1"));
@@ -637,7 +637,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             case MotionEvent.ACTION_MOVE:
                 int diff;
                 if (allowContinueScroll) {
-                    diff = (originTouchX - x) / 4 * 3;  // If allow continue scroll we should increase move scale (actual move distance)/(view move distance)
+                    diff = (originTouchX - x) / 4 * 3;  // If allow continue scroll we should increase move scale (finger move distance)/(view actually move distance)
                 } else {
                     diff = (originTouchX - x) / 3 * 2;
                 }
