@@ -46,7 +46,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private ArrayList<Integer> mSelectedIcons;
     private ArrayList<String> mCatalogs;
 
-    protected static int SCREEN_WIDTH;
+    private static int SCREEN_WIDTH;
     private static int SCREEN_HEIGHT;
 
 
@@ -85,7 +85,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private WeakReference<Bitmap> mWeakReference;
 
-    public CENTER_BG mBgShape = CENTER_BG.CIRCLE;
+    private CENTER_BG mBgShape = CENTER_BG.CIRCLE;
 
     private final int FIX_COLOR = 255;
 
@@ -453,7 +453,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
 
-    protected void animation(float diff) {
+    private void animation(float diff) {
         float fadeRation = diff * 1.6f;
         float showInRation = diff * 1.2f;
         final int centerItemIndex = mVisibleFunctionCount / 2 + 1;
@@ -563,7 +563,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
 
-    protected OnHorizontalScrollListener mOnHorizontalScrollListener = null;
+    private OnHorizontalScrollListener mOnHorizontalScrollListener = null;
 
     public void setOnHorizontalScrollListener(OnHorizontalScrollListener mOnHorizontalScrollListener) {
         this.mOnHorizontalScrollListener = mOnHorizontalScrollListener;
@@ -591,7 +591,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         super.onScrollChanged(l, t, oldl, oldt);
     }
 
-    final Runnable scrollToCenter = new Runnable() {
+    private final Runnable scrollToCenter = new Runnable() {
         @Override
         public void run() {
             scrollTo(ITEM_WIDTH, 0);
@@ -664,13 +664,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     smoothScrollBy(-upDiff, 0);
                 } else {
                     if (upDiff > 0) {
-                        scrollBy(ITEM_WIDTH - upDiff, 0);
+                        scrollBy(abs(upDiff) < ITEM_WIDTH ? (ITEM_WIDTH - upDiff) : ITEM_WIDTH, 0);
                         resortArray(DIRECTION.LEFT);
                         if (mOnItemChangeListener != null) {
                             mOnItemChangeListener.onItemChange(DIRECTION.LEFT, true);
                         }
                     } else {
-                        scrollBy(-ITEM_WIDTH - upDiff, 0);
+                        scrollBy(abs(upDiff) < ITEM_WIDTH ? (-ITEM_WIDTH - upDiff) : (-ITEM_WIDTH), 0);
                         resortArray(DIRECTION.RIGHT);
                         if (mOnItemChangeListener != null) {
                             mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, true);
