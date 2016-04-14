@@ -64,8 +64,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private int originTouchX = 0;
 
-    // visible function count
     private int mVisibleFunctionCount = 5;
+
+    final private int fixedMidItemIndex = 3;
 
     private int mSlopeDistance = 0;
 
@@ -169,10 +170,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      * @param mCatalogs        catalogs array
      */
     public void setData(ArrayList<Integer> mUnSelectedIcons, ArrayList<Integer> mSelectedIcons, ArrayList<String> mCatalogs) {
-        setUnSelectedIcons(mUnSelectedIcons);
-        setSelectedIcons(mSelectedIcons);
-        setCatalogs(mCatalogs);
-        refreshChildView();
+        if (checkDate(mUnSelectedIcons, mSelectedIcons, mCatalogs)) {
+            setUnSelectedIcons(mUnSelectedIcons);
+            setSelectedIcons(mSelectedIcons);
+            setCatalogs(mCatalogs);
+            initData();
+            refreshChildView();
+        }
     }
 
     /**
@@ -236,7 +240,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         if (t.isEmpty() || t.size() != mVisibleFunctionCount) {
             throw new IllegalArgumentException("Input date number error");
         }
-        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size())) {
+        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size())) { //  just in case
             return t;
         }
         E e1 = t.get(0);
@@ -249,20 +253,26 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
 
     /**
-     * set visible function number count, should be odd number
+     * set visible function number count, should bigger or equal to 5
      *
      * @param visibleFunctionCount visible number
      */
     public void setVisibleFunctionCount(int visibleFunctionCount) {
-        if (0 != visibleFunctionCount % 2) {
+        if (visibleFunctionCount >= 5) {
             mVisibleFunctionCount = visibleFunctionCount;
         } else {
-            throw new IllegalArgumentException("Visible function count should be odd");
+            throw new IllegalArgumentException("Date items should more than 4");
         }
     }
 
     private boolean checkDate() {
-        return (mSelectedIcons.size() == mUnSelectedIcons.size() ? (mUnSelectedIcons.size() == mCatalogs.size() ? true : false) : false) && (mSelectedIcons.size() == 0 ? false : true);
+        mVisibleFunctionCount = mSelectedIcons.size();
+        return (mVisibleFunctionCount == mUnSelectedIcons.size() && (mVisibleFunctionCount == mCatalogs.size())) && (mVisibleFunctionCount != 0);
+    }
+
+    private boolean checkDate(ArrayList<Integer> mUnSelectedIcons, ArrayList<Integer> mSelectedIcons, ArrayList<String> mCatalogs) {
+        setVisibleFunctionCount(mSelectedIcons.size());
+        return (mVisibleFunctionCount == mUnSelectedIcons.size() && (mVisibleFunctionCount == mCatalogs.size())) && (mVisibleFunctionCount != 0);
     }
 
     public CenterSelectedSwipeLayout(Context context) {
@@ -373,14 +383,14 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     mWeakReference = new WeakReference<>(getBgBitmap(mBgShape));
                 }
                 f.setBackground(new BitmapDrawable(mContext.getResources(), mWeakReference.get()));
-                if (i != itemsIndex.length / 2) {
+                if (i != fixedMidItemIndex) {
                     f.getBackground().setAlpha(0);
                 }
 
                 ImageView ivUnSelected = new ImageView(mContext);
                 ivUnSelected.setTag(UNSELECTED_ICON_TAG);
                 ivUnSelected.setImageResource(mUnSelectedIcons.get(i));
-                if (i == itemsIndex.length / 2) {
+                if (i == fixedMidItemIndex) {
                     ivUnSelected.setVisibility(View.GONE);
                 }
 
@@ -388,7 +398,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 ivFocused.setTag(SELECT_ICON_TAG);
                 ivFocused.setVisibility(View.GONE);
                 ivFocused.setImageResource(mSelectedIcons.get(i));
-                if (i == itemsIndex.length / 2) {
+                if (i == fixedMidItemIndex) {
                     ivFocused.setVisibility(View.VISIBLE);
                     ivFocused.setScaleX(mScaleRatio);
                     ivFocused.setScaleY(mScaleRatio);
@@ -398,7 +408,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 tv.setTag(CATALOG_TAG);
                 tv.setText(mCatalogs.get(i));
 
-                if (i == itemsIndex.length / 2) {
+                if (i == fixedMidItemIndex) {
                     tv.setTextColor(Color.rgb(FIX_COLOR, FIX_COLOR, FIX_COLOR));
                 }
 
@@ -434,7 +444,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 ivFocused.setVisibility(View.GONE);
                 ivUnSelected.setAlpha(1f);
                 ivFocused.setAlpha(1f);
-                if (i == childCount / 2) {
+                if (i == fixedMidItemIndex) {
                     ivUnSelected.setVisibility(View.GONE);
                     ivFocused.setVisibility(View.VISIBLE);
                     ivFocused.setScaleX(mScaleRatio);
@@ -456,14 +466,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private void animation(float diff) {
         float fadeRation = diff * 1.6f;
         float showInRation = diff * 1.2f;
-        final int centerItemIndex = mVisibleFunctionCount / 2 + 1;
 
-        FrameLayout mid = (FrameLayout) linearLayout.getChildAt(centerItemIndex);
+        FrameLayout mid = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex);
         ImageView midIV1 = (ImageView) mid.findViewWithTag(UNSELECTED_ICON_TAG);
         ImageView midIV2 = (ImageView) mid.findViewWithTag(SELECT_ICON_TAG);
         TextView midTV = (TextView) mid.findViewWithTag(CATALOG_TAG);
         if (diff > 0) {             // right swipe animation
-            FrameLayout left = (FrameLayout) linearLayout.getChildAt(centerItemIndex - 1);
+            FrameLayout left = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex - 1);
             ImageView leftIV1 = (ImageView) left.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView leftIV2 = (ImageView) left.findViewWithTag(SELECT_ICON_TAG);
             TextView leftTV = (TextView) left.findViewWithTag(CATALOG_TAG);
@@ -500,7 +509,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         } else {                      // left swipe animation
 
-            FrameLayout right = (FrameLayout) linearLayout.getChildAt(centerItemIndex + 1);
+            FrameLayout right = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex + 1);
             ImageView rightIV1 = (ImageView) right.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView rightIV2 = (ImageView) right.findViewWithTag(SELECT_ICON_TAG);
             TextView rightTV = (TextView) right.findViewWithTag(CATALOG_TAG);
@@ -701,7 +710,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         }
         tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
         tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
-        itemsIndex = tmpIndex;
+        System.arraycopy(tmpIndex, 0, itemsIndex, 0, tmpIndex.length);
     }
 
     private void resortArray(int index) {
@@ -712,7 +721,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         }
         tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
         tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
-        itemsIndex = tmpIndex;
+        System.arraycopy(tmpIndex, 0, itemsIndex, 0, tmpIndex.length);
     }
 
     @Override

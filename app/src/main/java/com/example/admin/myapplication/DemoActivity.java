@@ -36,6 +36,7 @@ public class DemoActivity extends AppCompatActivity {
         mUnSelectedIcons.add(R.drawable.icon_wd0_34px);
         mUnSelectedIcons.add(R.drawable.icon_yy0_34px);
         mUnSelectedIcons.add(R.drawable.icon_yyue0_34px);
+//        mUnSelectedIcons.add(R.drawable.icon_ty0_34px);
 
 
         mSelectedIcons.add(R.drawable.icon_dy1_34px);
@@ -43,12 +44,14 @@ public class DemoActivity extends AppCompatActivity {
         mSelectedIcons.add(R.drawable.icon_wd1_34px);
         mSelectedIcons.add(R.drawable.icon_yy1_34px);
         mSelectedIcons.add(R.drawable.icon_yyue1_34px);
+//        mSelectedIcons.add(R.drawable.icon_ty1_34px);
 
         mCatalogs.add("电影");
         mCatalogs.add("投影");
         mCatalogs.add("舞蹈");
         mCatalogs.add("语音");
         mCatalogs.add("音乐");
+//        mCatalogs.add("眼睛");
     }
 
     public void pre(View view) {
