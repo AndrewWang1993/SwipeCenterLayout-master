@@ -1,13 +1,13 @@
 package website.xiaoming.CenterSelectedSwipeLibrary;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Build;
+import android.graphics.drawable.Drawable;
 import android.support.v4.view.ViewConfigurationCompat;
 import android.util.AttributeSet;
 import android.view.Gravity;
@@ -38,10 +38,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     final private Context mContext;
 
-    private static final String UNSELECTED_ICON_TAG = "un_selected_icon";
-    private static final String SELECT_ICON_TAG = "selected_icon";
-    private static final String CATALOG_TAG = "catalog";
+    final private static String UNSELECTED_ICON_TAG = "un_selected_icon";
+    final private static String SELECT_ICON_TAG = "selected_icon";
+    final private static String CATALOG_TAG = "catalog";
 
+    final private int FIX_MID_ITEM_INDEX = 3;
+    final private int FIX_FULL_COLOR = 255;
+    
     private ArrayList<Integer> mUnSelectedIcons;
     private ArrayList<Integer> mSelectedIcons;
     private ArrayList<String> mCatalogs;
@@ -56,6 +59,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private static int ITEM_WIDTH;
     private static int ITEM_HEIGHT;
 
+    private static int sDefaultCenterBgColor=Color.parseColor("#6FB1E1");
+    
     private int mBackGroundColor = Color.parseColor("#ffffff");
 
     private int[] itemsIndex;
@@ -66,15 +71,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private int mVisibleFunctionCount = 5;
 
-    final private int fixedMidItemIndex = 3;
-
     private int mSlopeDistance = 0;
 
     private float mScaleRatio = 1.2f;
-
-    private LinearLayout linearLayout;
-
-    private MotionEvent mMotionEvent;
 
     private boolean isAlreadyMoveOutOfBoundary = false;
 
@@ -87,8 +86,11 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private WeakReference<Bitmap> mWeakReference;
 
     private CENTER_BG mBgShape = CENTER_BG.CIRCLE;
+    
+    private LinearLayout linearLayout;
 
-    private final int FIX_COLOR = 255;
+    private MotionEvent mMotionEvent;
+
 
 
     public boolean isAllowContinueScroll() {
@@ -107,14 +109,11 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     public enum DIRECTION {
         LEFT, RIGHT
     }
-
-
-    public void setBgShape(CENTER_BG mBgShape) {
-        this.mBgShape = mBgShape;
-    }
+    
 
     public enum CENTER_BG {
-        CIRCLE(Color.parseColor("#6FB1E1")), RECTANGLE(Color.parseColor("#6FB1E1")), OVAL(Color.parseColor("#6FB1E1"));
+        CIRCLE(sDefaultCenterBgColor), RECTANGLE(sDefaultCenterBgColor), OVAL(sDefaultCenterBgColor);
+        
         public int bgColor;
 
         public int getBgColor() {
@@ -124,6 +123,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         CENTER_BG(int bgColor) {
             this.bgColor = bgColor;
         }
+    }
+
+    public void setBgShape(CENTER_BG mBgShape) {
+        this.mBgShape = mBgShape;
     }
 
 
@@ -345,7 +348,6 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         setOnTouchListener(this);
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private Bitmap getBgBitmap(CENTER_BG centerBg) {
         if (mBitmap == null || mBitmap.isRecycled()) {
             mBitmap = Bitmap.createBitmap(ITEM_WIDTH, ITEM_HEIGHT, Bitmap.Config.ARGB_8888);
@@ -360,12 +362,25 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     canvas.drawRect(0, 0, ITEM_WIDTH, ITEM_HEIGHT, paint);
                     break;
                 case OVAL:
-                    canvas.drawOval(0, 0, ITEM_WIDTH, ITEM_HEIGHT, paint);
+                    RectF rectF = new RectF(0, 0, ITEM_WIDTH, ITEM_HEIGHT);
+                    canvas.drawOval(rectF, paint);
                     break;
             }
             paint.reset();
         }
-        return mBitmap;
+        final Bitmap cpBitmap = mBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        if (mBitmap == null && !mBitmap.isRecycled()) {
+            mBitmap.recycle();
+            mBitmap = null;
+        }
+        return cpBitmap;
+    }
+
+    private Drawable getBgDrawable() {
+        if (mWeakReference == null || mWeakReference.get() == null) {
+            mWeakReference = new WeakReference<>(getBgBitmap(mBgShape));
+        }
+        return new BitmapDrawable(mContext.getResources(),mWeakReference.get());
     }
 
     private void refreshChildView() {
@@ -378,19 +393,15 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 f.setLayoutParams(lp);
                 f.setMinimumHeight(ITEM_WIDTH);
                 f.setMinimumHeight(ITEM_HEIGHT);
-
-                if (mWeakReference == null || mWeakReference.get() == null) {
-                    mWeakReference = new WeakReference<>(getBgBitmap(mBgShape));
-                }
-                f.setBackground(new BitmapDrawable(mContext.getResources(), mWeakReference.get()));
-                if (i != fixedMidItemIndex) {
+                f.setBackground(getBgDrawable());
+                if (i != FIX_MID_ITEM_INDEX) {
                     f.getBackground().setAlpha(0);
                 }
 
                 ImageView ivUnSelected = new ImageView(mContext);
                 ivUnSelected.setTag(UNSELECTED_ICON_TAG);
                 ivUnSelected.setImageResource(mUnSelectedIcons.get(i));
-                if (i == fixedMidItemIndex) {
+                if (i == FIX_MID_ITEM_INDEX) {
                     ivUnSelected.setVisibility(View.GONE);
                 }
 
@@ -398,7 +409,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 ivFocused.setTag(SELECT_ICON_TAG);
                 ivFocused.setVisibility(View.GONE);
                 ivFocused.setImageResource(mSelectedIcons.get(i));
-                if (i == fixedMidItemIndex) {
+                if (i == FIX_MID_ITEM_INDEX) {
                     ivFocused.setVisibility(View.VISIBLE);
                     ivFocused.setScaleX(mScaleRatio);
                     ivFocused.setScaleY(mScaleRatio);
@@ -408,8 +419,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 tv.setTag(CATALOG_TAG);
                 tv.setText(mCatalogs.get(i));
 
-                if (i == fixedMidItemIndex) {
-                    tv.setTextColor(Color.rgb(FIX_COLOR, FIX_COLOR, FIX_COLOR));
+                if (i == FIX_MID_ITEM_INDEX) {
+                    tv.setTextColor(Color.rgb(FIX_FULL_COLOR, FIX_FULL_COLOR, FIX_FULL_COLOR));
                 }
 
                 FrameLayout.LayoutParams lp1 =
@@ -444,13 +455,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 ivFocused.setVisibility(View.GONE);
                 ivUnSelected.setAlpha(1f);
                 ivFocused.setAlpha(1f);
-                if (i == fixedMidItemIndex) {
+                if (i == FIX_MID_ITEM_INDEX) {
                     ivUnSelected.setVisibility(View.GONE);
                     ivFocused.setVisibility(View.VISIBLE);
                     ivFocused.setScaleX(mScaleRatio);
                     ivFocused.setScaleY(mScaleRatio);
-                    tv.setTextColor(Color.rgb(FIX_COLOR, FIX_COLOR, FIX_COLOR));
-                    f.getBackground().setAlpha(FIX_COLOR);
+                    tv.setTextColor(Color.rgb(FIX_FULL_COLOR, FIX_FULL_COLOR, FIX_FULL_COLOR));
+                    f.getBackground().setAlpha(FIX_FULL_COLOR);
                     f.getBackground().setBounds(0, 0, ITEM_WIDTH, ITEM_HEIGHT);
                 } else {
                     tv.setTextColor(Color.rgb(0, 0, 0));
@@ -467,12 +478,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         float fadeRation = diff * 1.6f;
         float showInRation = diff * 1.2f;
 
-        FrameLayout mid = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex);
+        FrameLayout mid = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX);
         ImageView midIV1 = (ImageView) mid.findViewWithTag(UNSELECTED_ICON_TAG);
         ImageView midIV2 = (ImageView) mid.findViewWithTag(SELECT_ICON_TAG);
         TextView midTV = (TextView) mid.findViewWithTag(CATALOG_TAG);
         if (diff > 0) {             // right swipe animation
-            FrameLayout left = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex - 1);
+            FrameLayout left = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX - 1);
             ImageView leftIV1 = (ImageView) left.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView leftIV2 = (ImageView) left.findViewWithTag(SELECT_ICON_TAG);
             TextView leftTV = (TextView) left.findViewWithTag(CATALOG_TAG);
@@ -492,8 +503,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             midIV2.setScaleY(scaleSmallRation);
 
             int w_2 = ITEM_WIDTH / 2;
-            mid.getBackground().setAlpha(FIX_COLOR);
-            left.getBackground().setAlpha(FIX_COLOR);
+            mid.getBackground().setAlpha(FIX_FULL_COLOR);
+            left.getBackground().setAlpha(FIX_FULL_COLOR);
             float t_diff = diff * 1.2f; // should quickly than scale up
             left.getBackground().setBounds((int) (w_2 - w_2 * diff), (int) (w_2 - w_2 * diff), (int) (w_2 + w_2 * diff), (int) (w_2 + w_2 * diff)); // scale up
             mid.getBackground().setBounds((int) (w_2 * t_diff), (int) (w_2 * t_diff), (int) (2 * w_2 - w_2 * t_diff), (int) (2 * w_2 - w_2 * t_diff));   // scale down
@@ -504,19 +515,19 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             leftIV2.setScaleX(scaleLargeRation);
             leftIV2.setScaleY(scaleLargeRation);
 
-            leftTV.setTextColor(Color.rgb((int) (FIX_COLOR * diff), (int) (FIX_COLOR * diff), (int) (FIX_COLOR * diff)));
-            midTV.setTextColor(Color.rgb((int) (FIX_COLOR * (1 - diff)), (int) (FIX_COLOR * (1 - diff)), (int) (FIX_COLOR * (1 - diff))));
+            leftTV.setTextColor(Color.rgb((int) (FIX_FULL_COLOR * diff), (int) (FIX_FULL_COLOR * diff), (int) (FIX_FULL_COLOR * diff)));
+            midTV.setTextColor(Color.rgb((int) (FIX_FULL_COLOR * (1 - diff)), (int) (FIX_FULL_COLOR * (1 - diff)), (int) (FIX_FULL_COLOR * (1 - diff))));
 
         } else {                      // left swipe animation
 
-            FrameLayout right = (FrameLayout) linearLayout.getChildAt(fixedMidItemIndex + 1);
+            FrameLayout right = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX + 1);
             ImageView rightIV1 = (ImageView) right.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView rightIV2 = (ImageView) right.findViewWithTag(SELECT_ICON_TAG);
             TextView rightTV = (TextView) right.findViewWithTag(CATALOG_TAG);
 
             int w_2 = ITEM_WIDTH / 2;
-            mid.getBackground().setAlpha(FIX_COLOR);
-            right.getBackground().setAlpha(FIX_COLOR);
+            mid.getBackground().setAlpha(FIX_FULL_COLOR);
+            right.getBackground().setAlpha(FIX_FULL_COLOR);
             float t_diff = diff * 1.2f; // should quickly than scale up
             right.getBackground().setBounds((int) (w_2 - w_2 * -diff), (int) (w_2 - w_2 * -diff), (int) (w_2 + w_2 * -diff), (int) (w_2 + w_2 * -diff));// scale up
             mid.getBackground().setBounds((int) (w_2 * -t_diff), (int) (w_2 * -t_diff), (int) (2 * w_2 - w_2 * -t_diff), (int) (2 * w_2 - w_2 * -t_diff));// scale down
@@ -539,8 +550,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             rightIV2.setScaleX(scaleLargeRation);
             rightIV2.setScaleY(scaleLargeRation);
 
-            rightTV.setTextColor(Color.rgb((int) (FIX_COLOR * -diff), (int) (FIX_COLOR * -diff), (int) (FIX_COLOR * -diff)));
-            midTV.setTextColor(Color.rgb((int) (FIX_COLOR * (1 + diff)), (int) (FIX_COLOR * (1 + diff)), (int) (FIX_COLOR * (1 + diff))));
+            rightTV.setTextColor(Color.rgb((int) (FIX_FULL_COLOR * -diff), (int) (FIX_FULL_COLOR * -diff), (int) (FIX_FULL_COLOR * -diff)));
+            midTV.setTextColor(Color.rgb((int) (FIX_FULL_COLOR * (1 + diff)), (int) (FIX_FULL_COLOR * (1 + diff)), (int) (FIX_FULL_COLOR * (1 + diff))));
 
         }
 
@@ -610,7 +621,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     /**
      * scroll to next item without animation
      */
-    public void next() {
+    final public void next() {
         scrollBy(-ITEM_WIDTH, 0);
         resortArray(DIRECTION.LEFT);
         scrollTo(ITEM_WIDTH, 0);
@@ -623,7 +634,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     /**
      * scroll to previous item without animation
      */
-    public void previous() {
+    final public void previous() {
         scrollBy(ITEM_WIDTH, 0);
         resortArray(DIRECTION.RIGHT);
         scrollTo(ITEM_WIDTH, 0);
@@ -762,7 +773,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      *
      * @param index ranges from [0, {@link #mVisibleFunctionCount}]
      */
-    public void jumpToIndex(int index) {
+    final public void jumpToIndex(int index) {
         if (index != mVisibleFunctionCount / 2) {
             if (mOnItemChangeListener != null) {
                 mOnItemChangeListener.onItemClick(itemsIndex[index + 1] - 1);
@@ -777,7 +788,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      * @param positionOffset       Value from [0, 1) indicating the offset from the page at position.
      * @param positionOffsetPixels Value in pixels indicating the offset from position.
      */
-    public void setScroll(int positionOffset, int positionOffsetPixels) {
+    final public void setScroll(int positionOffset, int positionOffsetPixels) {
         positionOffset = positionOffsetPixels > 0 ? positionOffset : -positionOffset;
         scrollBy(positionOffset * ITEM_WIDTH, 0);
         resortArray(positionOffset > 0 ? DIRECTION.LEFT : DIRECTION.RIGHT);
