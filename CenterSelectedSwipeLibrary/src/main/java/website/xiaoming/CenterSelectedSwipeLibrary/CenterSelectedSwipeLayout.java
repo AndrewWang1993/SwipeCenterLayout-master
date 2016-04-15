@@ -420,6 +420,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
                 if (i == FIX_MID_ITEM_INDEX) {
                     tv.setTextColor(Color.rgb(FIX_FULL_COLOR, FIX_FULL_COLOR, FIX_FULL_COLOR));
+                }else {
+                    tv.setTextColor(Color.BLACK);
                 }
 
                 FrameLayout.LayoutParams lp1 =
