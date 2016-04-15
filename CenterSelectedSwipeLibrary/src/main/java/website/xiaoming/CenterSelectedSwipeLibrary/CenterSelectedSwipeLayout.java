@@ -44,7 +44,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     final private int FIX_MID_ITEM_INDEX = 3;
     final private int FIX_FULL_COLOR = 255;
-    
+
     private ArrayList<Integer> mUnSelectedIcons;
     private ArrayList<Integer> mSelectedIcons;
     private ArrayList<String> mCatalogs;
@@ -59,8 +59,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private static int ITEM_WIDTH;
     private static int ITEM_HEIGHT;
 
-    private static int sDefaultCenterBgColor=Color.parseColor("#6FB1E1");
-    
+    private static int sDefaultCenterBgColor = Color.parseColor("#6FB1E1");
+
     private int mBackGroundColor = Color.parseColor("#ffffff");
 
     private int[] itemsIndex;
@@ -86,11 +86,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private WeakReference<Bitmap> mWeakReference;
 
     private CENTER_BG mBgShape = CENTER_BG.CIRCLE;
-    
+
     private LinearLayout linearLayout;
 
     private MotionEvent mMotionEvent;
-
 
 
     public boolean isAllowContinueScroll() {
@@ -109,11 +108,11 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     public enum DIRECTION {
         LEFT, RIGHT
     }
-    
+
 
     public enum CENTER_BG {
         CIRCLE(sDefaultCenterBgColor), RECTANGLE(sDefaultCenterBgColor), OVAL(sDefaultCenterBgColor);
-        
+
         public int bgColor;
 
         public int getBgColor() {
@@ -380,7 +379,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         if (mWeakReference == null || mWeakReference.get() == null) {
             mWeakReference = new WeakReference<>(getBgBitmap(mBgShape));
         }
-        return new BitmapDrawable(mContext.getResources(),mWeakReference.get());
+        return new BitmapDrawable(mContext.getResources(), mWeakReference.get());
     }
 
     private void refreshChildView() {
@@ -727,7 +726,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     private void resortArray(int index) {
         int[] tmpIndex = new int[mVisibleFunctionCount + 2];
         for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            tmpIndex[i] = itemsIndex[(i + index - mVisibleFunctionCount / 2
+            tmpIndex[i] = itemsIndex[(i + (index - (FIX_MID_ITEM_INDEX - 1))
                     + mVisibleFunctionCount) % mVisibleFunctionCount];
         }
         tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
@@ -774,7 +773,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      * @param index ranges from [0, {@link #mVisibleFunctionCount}]
      */
     final public void jumpToIndex(int index) {
-        if (index != mVisibleFunctionCount / 2) {
+        if (index != FIX_MID_ITEM_INDEX - 1) {
             if (mOnItemChangeListener != null) {
                 mOnItemChangeListener.onItemClick(itemsIndex[index + 1] - 1);
             }
