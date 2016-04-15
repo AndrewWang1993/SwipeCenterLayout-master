@@ -420,7 +420,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
                 if (i == FIX_MID_ITEM_INDEX) {
                     tv.setTextColor(Color.rgb(FIX_FULL_COLOR, FIX_FULL_COLOR, FIX_FULL_COLOR));
-                }else {
+                } else {
                     tv.setTextColor(Color.BLACK);
                 }
 
@@ -596,6 +596,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         this.mOnItemChangeListener = mOnItemChangeListener;
     }
 
+    protected onSwipeChangeListener mOnSwipeChangeListener = null;
+
+    public void setOnSwipeChangeListener(onSwipeChangeListener mOnSwipeChangeListener) {
+        this.mOnSwipeChangeListener = mOnSwipeChangeListener;
+    }
+
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
@@ -699,6 +705,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     }
                     scrollTo(ITEM_WIDTH, 0);
                 }
+                if (mOnSwipeChangeListener != null && !continueScrollFlag) {
+                    mOnSwipeChangeListener.onItemChange(upDiff > 0 ? DIRECTION.LEFT : DIRECTION.RIGHT, (itemsIndex[FIX_MID_ITEM_INDEX] - 1));
+                }
                 refreshChildView();
                 originTouchX = 0;
                 if (allowContinueScroll && continueScrollFlag) {
@@ -749,6 +758,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         switch (ev.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
+                continueScrollFlag = false;
                 isAlreadyMoveOutOfBoundary = false;
                 mMotionEvent = MotionEvent.obtain(ev);
                 break;
@@ -809,11 +819,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     public interface onItemChangeListener {
         /**
-         * Listener to identify which direction user swipe
+         * Listener to identify which direction user swipe. Use {@link onSwipeChangeListener} instead.
+         * Case it can not detected whether finger is released when callback this function
          *
          * @param direction        swipe direction
          * @param performedBySwipe whether performed by user finger swipe
          */
+        @Deprecated
         void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, boolean performedBySwipe);
 
         /**
@@ -823,6 +835,17 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
          */
         void onItemClick(int index);
     }
+
+    public interface onSwipeChangeListener {
+        /**
+         * Listener to identify when user stop scroll (include once scroll and continue scroll) , which item are selected.
+         *
+         * @param direction swipe direction
+         * @param index     the index selected when finger up screen
+         */
+        void onItemChange(CenterSelectedSwipeLayout.DIRECTION direction, int index);
+    }
+
 
     /**
      * Simple implementation of the {@link onItemChangeListener} interface with stub
