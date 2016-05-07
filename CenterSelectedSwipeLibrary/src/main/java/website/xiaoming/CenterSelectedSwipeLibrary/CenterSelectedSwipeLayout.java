@@ -242,7 +242,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         if (t.isEmpty() || t.size() != mVisibleFunctionCount) {
             throw new IllegalArgumentException("Input date number error");
         }
-        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size())) { //  just in case
+        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size()-1)) { //  just in case
             return t;
         }
         E e1 = t.get(0);
