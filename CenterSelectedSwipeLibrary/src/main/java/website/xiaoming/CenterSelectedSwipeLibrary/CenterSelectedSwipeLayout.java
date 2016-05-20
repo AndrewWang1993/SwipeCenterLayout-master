@@ -22,10 +22,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.WeakHashMap;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
@@ -83,7 +84,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private Bitmap mBitmap = null;
 
-    private WeakReference<Bitmap> mWeakReference;
+    private WeakHashMap<Float, SoftReference<Bitmap>> mCache = new WeakHashMap<>();
 
     private CENTER_BG mBgShape = CENTER_BG.CIRCLE;
 
@@ -242,7 +243,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         if (t.isEmpty() || t.size() != mVisibleFunctionCount) {
             throw new IllegalArgumentException("Input date number error");
         }
-        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size()-1)) { //  just in case
+        if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size() - 1)) { //  just in case
             return t;
         }
         E e1 = t.get(0);
@@ -347,39 +348,52 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         setOnTouchListener(this);
     }
 
-    private Bitmap getBgBitmap(CENTER_BG centerBg) {
-        if (mBitmap == null || mBitmap.isRecycled()) {
-            mBitmap = Bitmap.createBitmap(ITEM_WIDTH, ITEM_HEIGHT, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(mBitmap);
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
-            paint.setColor(centerBg.getBgColor());
-            switch (centerBg) {
-                case CIRCLE:
-                    canvas.drawCircle(ITEM_WIDTH / 2, ITEM_HEIGHT / 2, ITEM_WIDTH / 2, paint);
-                    break;
-                case RECTANGLE:
-                    canvas.drawRect(0, 0, ITEM_WIDTH, ITEM_HEIGHT, paint);
-                    break;
-                case OVAL:
-                    RectF rectF = new RectF(0, 0, ITEM_WIDTH, ITEM_HEIGHT);
-                    canvas.drawOval(rectF, paint);
-                    break;
-            }
-            paint.reset();
+    private Bitmap generateBitmap(CENTER_BG centerBg, float scaleRatio) {
+        mBitmap = Bitmap.createBitmap(ITEM_WIDTH, ITEM_HEIGHT, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(mBitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+        paint.setColor(centerBg.getBgColor());
+        switch (centerBg) {
+            case CIRCLE:
+                canvas.drawCircle(ITEM_WIDTH / 2, ITEM_HEIGHT / 2, ITEM_WIDTH / 2 * scaleRatio, paint);
+                break;
+            case RECTANGLE:
+                canvas.drawRect(0, 0, ITEM_WIDTH * scaleRatio, ITEM_HEIGHT * scaleRatio, paint);
+                break;
+            case OVAL:
+                RectF rectF = new RectF(0, 0, ITEM_WIDTH * scaleRatio, ITEM_HEIGHT * scaleRatio);
+                canvas.drawOval(rectF, paint);
+                break;
         }
+        paint.reset();
         final Bitmap cpBitmap = mBitmap.copy(Bitmap.Config.ARGB_8888, true);
-        if (mBitmap == null && !mBitmap.isRecycled()) {
+        if (mBitmap != null && !mBitmap.isRecycled()) {
             mBitmap.recycle();
             mBitmap = null;
         }
+        mCache.put(scaleRatio, new SoftReference<>(cpBitmap));
         return cpBitmap;
     }
 
-    private Drawable getBgDrawable() {
-        if (mWeakReference == null || mWeakReference.get() == null) {
-            mWeakReference = new WeakReference<>(getBgBitmap(mBgShape));
+    private Bitmap getBgBitmap(CENTER_BG centerBg, float scaleRatio) {
+
+        if (mCache.containsKey(scaleRatio)) {
+            SoftReference<Bitmap> reference = mCache.get(scaleRatio);
+            Bitmap bitmap = reference.get();
+            if (bitmap != null) {
+                return bitmap;
+            }
+            return generateBitmap(centerBg,scaleRatio);
         }
-        return new BitmapDrawable(mContext.getResources(), mWeakReference.get());
+        return generateBitmap(centerBg,scaleRatio);
+    }
+
+    private Drawable getBgDrawable() {
+        return getBgDrawable(1.0f);
+    }
+
+    private Drawable getBgDrawable(float scaleRatio) {
+        return new BitmapDrawable(mContext.getResources(), getBgBitmap(mBgShape, scaleRatio));
     }
 
     private void refreshChildView() {
@@ -462,8 +476,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     ivFocused.setScaleX(mScaleRatio);
                     ivFocused.setScaleY(mScaleRatio);
                     tv.setTextColor(Color.rgb(FIX_FULL_COLOR, FIX_FULL_COLOR, FIX_FULL_COLOR));
+                    f.setBackground(getBgDrawable());
                     f.getBackground().setAlpha(FIX_FULL_COLOR);
-                    f.getBackground().setBounds(0, 0, ITEM_WIDTH, ITEM_HEIGHT);
                 } else {
                     tv.setTextColor(Color.rgb(0, 0, 0));
                     f.getBackground().setAlpha(0);
@@ -506,9 +520,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             int w_2 = ITEM_WIDTH / 2;
             mid.getBackground().setAlpha(FIX_FULL_COLOR);
             left.getBackground().setAlpha(FIX_FULL_COLOR);
-            float t_diff = diff * 1.2f; // should quickly than scale up
-            left.getBackground().setBounds((int) (w_2 - w_2 * diff), (int) (w_2 - w_2 * diff), (int) (w_2 + w_2 * diff), (int) (w_2 + w_2 * diff)); // scale up
-            mid.getBackground().setBounds((int) (w_2 * t_diff), (int) (w_2 * t_diff), (int) (2 * w_2 - w_2 * t_diff), (int) (2 * w_2 - w_2 * t_diff));   // scale down
+            float t_diff = diff * 1.2f; // scale down should quickly than scale up
+
+            left.setBackground(getBgDrawable(diff));        // scale up
+            mid.setBackground(getBgDrawable((1 - t_diff)));   // scale down
 
 
             leftIV1.setAlpha(1 - fadeRation);
@@ -529,9 +544,10 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             int w_2 = ITEM_WIDTH / 2;
             mid.getBackground().setAlpha(FIX_FULL_COLOR);
             right.getBackground().setAlpha(FIX_FULL_COLOR);
-            float t_diff = diff * 1.2f; // should quickly than scale up
-            right.getBackground().setBounds((int) (w_2 - w_2 * -diff), (int) (w_2 - w_2 * -diff), (int) (w_2 + w_2 * -diff), (int) (w_2 + w_2 * -diff));// scale up
-            mid.getBackground().setBounds((int) (w_2 * -t_diff), (int) (w_2 * -t_diff), (int) (2 * w_2 - w_2 * -t_diff), (int) (2 * w_2 - w_2 * -t_diff));// scale down
+            float t_diff = diff * 1.2f; //  scale down should quickly than scale up
+
+            right.setBackground(getBgDrawable(-diff));       // scale up
+            mid.setBackground(getBgDrawable((1 + t_diff)));   // scale down
 
             midIV1.setVisibility(View.VISIBLE);
             midIV2.setVisibility(View.VISIBLE);
