@@ -30,7 +30,6 @@ import java.util.WeakHashMap;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
 
 /**
  * Created by PeoceWang on 2016/4/9 0009,10:32.
@@ -62,13 +61,13 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private static int sDefaultCenterBgColor = Color.parseColor("#6FB1E1");
 
-    private int mBackGroundColor = Color.parseColor("#ffffff");
+    private int mBackGroundColor = Color.WHITE;
 
-    private int[] itemsIndex;
+    private int[] mItemsIndex;
 
-    private int currentOffsetX = 0;
+    private int mOriginOffsetX = 0;
 
-    private int originTouchX = 0;
+    private int mOriginTouchX = 0;
 
     private int mVisibleFunctionCount = 5;
 
@@ -76,29 +75,29 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
     private float mScaleRatio = 1.2f;
 
-    private boolean isAlreadyMoveOutOfBoundary = false;
+    private boolean mIsAlreadyMoveOutOfBoundary = false;
 
-    private boolean allowContinueScroll = true;
+    private boolean mAllowContinueScroll = true;
 
-    private boolean continueScrollFlag = false;
+    private boolean mContinueScrollDelayCallBackFlag = false;
 
     private Bitmap mBitmap = null;
 
-    private WeakHashMap<Float, SoftReference<Bitmap>> mCache = new WeakHashMap<>();
+    private WeakHashMap<Float, SoftReference<Bitmap>> mBgBitmapCache = new WeakHashMap<>();
 
     private CENTER_BG mBgShape = CENTER_BG.CIRCLE;
 
-    private LinearLayout linearLayout;
+    private LinearLayout mLinearLayout;
 
     private MotionEvent mMotionEvent;
 
 
     public boolean isAllowContinueScroll() {
-        return allowContinueScroll;
+        return mAllowContinueScroll;
     }
 
-    public void setAllowContinueScroll(boolean allowContinueScroll) {
-        this.allowContinueScroll = allowContinueScroll;
+    public void setAllowContinueScroll(boolean mAllowContinueScroll) {
+        this.mAllowContinueScroll = mAllowContinueScroll;
     }
 
     public int getVisibleFunctionCount() {
@@ -240,7 +239,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
 
     private <T extends List<E>, E> T processData(T t) {
-        if (t.isEmpty() || t.size() != mVisibleFunctionCount) {
+        if (t.isEmpty() || t.size() < mVisibleFunctionCount) {
             throw new IllegalArgumentException("Input date number error");
         }
         if (t.get(0) == t.get(t.size() - 2) && t.get(1) == t.get(t.size() - 1)) { //  just in case
@@ -308,10 +307,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         SCREEN_HEIGHT = Util.getScreenHeight(mContext);
 
         final ViewConfiguration configuration = ViewConfiguration.get(mContext);
-        mSlopeDistance = ViewConfigurationCompat.getScaledPagingTouchSlop(configuration) / 2;   // FIX: when finger swipe wandering left and right, then return to near by, exception click error
+        mSlopeDistance = ViewConfigurationCompat.getScaledPagingTouchSlop(configuration) / 2;
 
         if (mUnSelectedIcons == null) {
-
             mUnSelectedIcons = new ArrayList<>();
         }
         if (mSelectedIcons == null) {
@@ -338,7 +336,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         setMainView();
         initData();
 
-        currentOffsetX = getScrollX();
+        mOriginOffsetX = getScrollX();
 
 
         if (checkDate()) {
@@ -371,21 +369,21 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
             mBitmap.recycle();
             mBitmap = null;
         }
-        mCache.put(scaleRatio, new SoftReference<>(cpBitmap));
+        mBgBitmapCache.put(scaleRatio, new SoftReference<>(cpBitmap));
         return cpBitmap;
     }
 
     private Bitmap getBgBitmap(CENTER_BG centerBg, float scaleRatio) {
 
-        if (mCache.containsKey(scaleRatio)) {
-            SoftReference<Bitmap> reference = mCache.get(scaleRatio);
+        if (mBgBitmapCache.containsKey(scaleRatio)) {
+            SoftReference<Bitmap> reference = mBgBitmapCache.get(scaleRatio);
             Bitmap bitmap = reference.get();
             if (bitmap != null) {
                 return bitmap;
             }
-            return generateBitmap(centerBg,scaleRatio);
+            return generateBitmap(centerBg, scaleRatio);
         }
-        return generateBitmap(centerBg,scaleRatio);
+        return generateBitmap(centerBg, scaleRatio);
     }
 
     private Drawable getBgDrawable() {
@@ -397,9 +395,9 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
     private void refreshChildView() {
-        final int childCount = linearLayout.getChildCount();
+        final int childCount = mLinearLayout.getChildCount();
         if (childCount == 0) {
-            for (int i : itemsIndex) {
+            for (int i : mItemsIndex) {
                 FrameLayout f = new FrameLayout(mContext);
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ITEM_WIDTH, ITEM_HEIGHT);
                 lp.gravity = Gravity.CENTER;
@@ -456,17 +454,17 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                 lp3.topMargin = ITEM_WIDTH / 4 + Util.dp2px(mContext, 3);
                 f.addView(tv, lp3);
 
-                linearLayout.addView(f);
+                mLinearLayout.addView(f);
             }
         } else {
             for (int i = 0; i < childCount; i++) {
-                FrameLayout f = (FrameLayout) linearLayout.getChildAt(i);
+                FrameLayout f = (FrameLayout) mLinearLayout.getChildAt(i);
                 ImageView ivUnSelected = (ImageView) f.findViewWithTag(UNSELECTED_ICON_TAG);
                 ImageView ivFocused = (ImageView) f.findViewWithTag(SELECT_ICON_TAG);
                 TextView tv = (TextView) f.findViewWithTag(CATALOG_TAG);
-                ivUnSelected.setImageResource(mUnSelectedIcons.get(itemsIndex[i]));
+                ivUnSelected.setImageResource(mUnSelectedIcons.get(mItemsIndex[i]));
                 ivUnSelected.setVisibility(View.VISIBLE);
-                ivFocused.setImageResource(mSelectedIcons.get(itemsIndex[i]));
+                ivFocused.setImageResource(mSelectedIcons.get(mItemsIndex[i]));
                 ivFocused.setVisibility(View.GONE);
                 ivUnSelected.setAlpha(1f);
                 ivFocused.setAlpha(1f);
@@ -482,7 +480,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     tv.setTextColor(Color.rgb(0, 0, 0));
                     f.getBackground().setAlpha(0);
                 }
-                tv.setText(mCatalogs.get(itemsIndex[i]));
+                tv.setText(mCatalogs.get(mItemsIndex[i]));
             }
         }
         post(scrollToCenter);
@@ -493,12 +491,12 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
         float fadeRation = diff * 1.6f;
         float showInRation = diff * 1.2f;
 
-        FrameLayout mid = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX);
+        FrameLayout mid = (FrameLayout) mLinearLayout.getChildAt(FIX_MID_ITEM_INDEX);
         ImageView midIV1 = (ImageView) mid.findViewWithTag(UNSELECTED_ICON_TAG);
         ImageView midIV2 = (ImageView) mid.findViewWithTag(SELECT_ICON_TAG);
         TextView midTV = (TextView) mid.findViewWithTag(CATALOG_TAG);
         if (diff > 0) {             // right swipe animation
-            FrameLayout left = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX - 1);
+            FrameLayout left = (FrameLayout) mLinearLayout.getChildAt(FIX_MID_ITEM_INDEX - 1);
             ImageView leftIV1 = (ImageView) left.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView leftIV2 = (ImageView) left.findViewWithTag(SELECT_ICON_TAG);
             TextView leftTV = (TextView) left.findViewWithTag(CATALOG_TAG);
@@ -536,7 +534,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         } else {                      // left swipe animation
 
-            FrameLayout right = (FrameLayout) linearLayout.getChildAt(FIX_MID_ITEM_INDEX + 1);
+            FrameLayout right = (FrameLayout) mLinearLayout.getChildAt(FIX_MID_ITEM_INDEX + 1);
             ImageView rightIV1 = (ImageView) right.findViewWithTag(UNSELECTED_ICON_TAG);
             ImageView rightIV2 = (ImageView) right.findViewWithTag(SELECT_ICON_TAG);
             TextView rightTV = (TextView) right.findViewWithTag(CATALOG_TAG);
@@ -575,28 +573,28 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
     private void initData() {
-        itemsIndex = new int[mVisibleFunctionCount + 2];
+        mItemsIndex = new int[mVisibleFunctionCount + 2];
         for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            itemsIndex[i] = i;
+            mItemsIndex[i] = i;
         }
-        itemsIndex[0] = itemsIndex[mVisibleFunctionCount];
-        itemsIndex[mVisibleFunctionCount + 1] = itemsIndex[1];
+        mItemsIndex[0] = mItemsIndex[mVisibleFunctionCount];
+        mItemsIndex[mVisibleFunctionCount + 1] = mItemsIndex[1];
     }
 
     private void setMainView() {
-        ViewGroup.LayoutParams layoutParamsH = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        setLayoutParams(layoutParamsH);
+        ViewGroup.LayoutParams lpHorizontalScrollView = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        setLayoutParams(lpHorizontalScrollView);
 
         setHorizontalScrollBarEnabled(false);
         setOverScrollMode(OVER_SCROLL_NEVER);
 
-        linearLayout = new LinearLayout(mContext);
-        ViewGroup.LayoutParams layoutParamsV = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Util.dp2px(mContext, 100));
-        linearLayout.setGravity(Gravity.CENTER);
-        linearLayout.setBackgroundColor(mBackGroundColor);
-        linearLayout.setOrientation(LinearLayout.HORIZONTAL);
+        mLinearLayout = new LinearLayout(mContext);
+        ViewGroup.LayoutParams lpLinearLayout = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Util.dp2px(mContext, 100));
+        mLinearLayout.setGravity(Gravity.CENTER);
+        mLinearLayout.setBackgroundColor(mBackGroundColor);
+        mLinearLayout.setOrientation(LinearLayout.HORIZONTAL);
 
-        addView(linearLayout, layoutParamsV);
+        addView(mLinearLayout, lpLinearLayout);
     }
 
 
@@ -645,63 +643,61 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
      * scroll to next item without animation
      */
     final public void next() {
-        scrollBy(-ITEM_WIDTH, 0);
-        resortArray(DIRECTION.LEFT);
-        scrollTo(ITEM_WIDTH, 0);
-        refreshChildView();
-        if (mOnItemChangeListener != null) {
-            mOnItemChangeListener.onItemChange(DIRECTION.LEFT, false);
-        }
+        scrollToDirection(DIRECTION.LEFT);
     }
 
     /**
      * scroll to previous item without animation
      */
     final public void previous() {
-        scrollBy(ITEM_WIDTH, 0);
-        resortArray(DIRECTION.RIGHT);
+        scrollToDirection(DIRECTION.RIGHT);
+    }
+
+    private void scrollToDirection(DIRECTION direction) {
+        scrollBy((direction == DIRECTION.LEFT ? -1 : 1) * ITEM_WIDTH, 0);
+        resortArray(direction);
         scrollTo(ITEM_WIDTH, 0);
         refreshChildView();
         if (mOnItemChangeListener != null) {
-            mOnItemChangeListener.onItemChange(DIRECTION.RIGHT, false);
+            mOnItemChangeListener.onItemChange(direction, false);
         }
     }
-
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         final int x = (int) event.getX();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                originTouchX = x;
-                currentOffsetX = getScrollX();
-                isAlreadyMoveOutOfBoundary = false;
+                mOriginTouchX = x;
+                mOriginOffsetX = getScrollX();
+                mIsAlreadyMoveOutOfBoundary = false;
                 break;
             case MotionEvent.ACTION_MOVE:
                 int diff;
-                if (allowContinueScroll) {
-                    diff = (originTouchX - x) / 4 * 3;  // If allow continue scroll we should increase move scale (finger move distance)/(view actually move distance)
+                if (mAllowContinueScroll) {
+                    diff = (mOriginTouchX - x) / 4 * 3;  // If allow continue scroll we should increase move scale (finger move distance)/(view actually move distance)
                 } else {
-                    diff = (originTouchX - x) / 3 * 2;
+                    diff = (mOriginTouchX - x) / 3 * 2;
                 }
                 final int nowOffset = getScrollX();
-                final int offset = currentOffsetX - nowOffset;
-                originTouchX = x;
-                isAlreadyMoveOutOfBoundary = isAlreadyMoveOutOfBoundary || checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY());
+                final int offset = mOriginOffsetX - nowOffset;
+                mOriginTouchX = x;
+                mIsAlreadyMoveOutOfBoundary = mIsAlreadyMoveOutOfBoundary
+                        || checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY());
                 if (abs(offset) < ITEM_WIDTH) {
                     scrollBy(diff, 0);
                     animation((float) (offset) / ITEM_WIDTH);
-                } else if (allowContinueScroll && !continueScrollFlag) {    // allow continue move
+                } else if (mAllowContinueScroll && !mContinueScrollDelayCallBackFlag) {    // Allow continue move
                     MotionEvent UpEvent = MotionEvent.obtain(event);
                     UpEvent.setAction(MotionEvent.ACTION_UP);
-                    continueScrollFlag = true;
+                    mContinueScrollDelayCallBackFlag = true;
                     onTouch(v, UpEvent);
                 }
                 break;
             case MotionEvent.ACTION_UP:
                 final int upOffset = getScrollX();
-                final int upDiff = upOffset - currentOffsetX;
-                if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY()) && !isAlreadyMoveOutOfBoundary) {
+                final int upDiff = upOffset - mOriginOffsetX;
+                if (!checkMove(mMotionEvent.getX(), mMotionEvent.getY(), event.getX(), event.getY()) && !mIsAlreadyMoveOutOfBoundary) {
                     processClick(event);
                 } else if (abs(upDiff) < ITEM_WIDTH / 3) {
                     smoothScrollBy(-upDiff, 0);
@@ -721,44 +717,40 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
                     }
                     scrollTo(ITEM_WIDTH, 0);
                 }
-                if (mOnSwipeChangeListener != null && !continueScrollFlag) {
-                    mOnSwipeChangeListener.onItemChange(upDiff > 0 ? DIRECTION.LEFT : DIRECTION.RIGHT, (itemsIndex[FIX_MID_ITEM_INDEX] - 1));
+                if (mOnSwipeChangeListener != null && !mContinueScrollDelayCallBackFlag) {
+                    mOnSwipeChangeListener.onItemChange(upDiff > 0 ? DIRECTION.LEFT : DIRECTION.RIGHT, (mItemsIndex[FIX_MID_ITEM_INDEX] - 1));
                 }
                 refreshChildView();
-                originTouchX = 0;
-                if (allowContinueScroll && continueScrollFlag) {
-                    MotionEvent UpEvent = MotionEvent.obtain(event);
-                    UpEvent.setAction(MotionEvent.ACTION_DOWN);
-                    continueScrollFlag = false;
-                    onTouch(v, UpEvent);
+                mOriginTouchX = 0;
+                if (mAllowContinueScroll && mContinueScrollDelayCallBackFlag) {
+                    MotionEvent DownEvent = MotionEvent.obtain(event);
+                    DownEvent.setAction(MotionEvent.ACTION_DOWN);
+                    mContinueScrollDelayCallBackFlag = false;
+                    onTouch(v, DownEvent);
                     return true;
                 }
-                isAlreadyMoveOutOfBoundary = false;
+                mIsAlreadyMoveOutOfBoundary = false;
                 break;
         }
         return true;
     }
 
     private void resortArray(DIRECTION direction) {
-        int[] tmpIndex = new int[mVisibleFunctionCount + 2];
-        for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            tmpIndex[i] = itemsIndex[(i + (direction == DIRECTION.LEFT ? 1 : -1)
-                    + mVisibleFunctionCount) % mVisibleFunctionCount];
-        }
-        tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
-        tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
-        System.arraycopy(tmpIndex, 0, itemsIndex, 0, tmpIndex.length);
+        reSortIndexArray(direction == DIRECTION.LEFT ? 1 : -1);
     }
 
     private void resortArray(int index) {
+        reSortIndexArray(index - (FIX_MID_ITEM_INDEX - 1));
+    }
+
+    private void reSortIndexArray(int diff) {
         int[] tmpIndex = new int[mVisibleFunctionCount + 2];
         for (int i = 1; i <= mVisibleFunctionCount; i++) {
-            tmpIndex[i] = itemsIndex[(i + (index - (FIX_MID_ITEM_INDEX - 1))
-                    + mVisibleFunctionCount) % mVisibleFunctionCount];
+            tmpIndex[i] = mItemsIndex[(i + diff + mVisibleFunctionCount) % mVisibleFunctionCount];
         }
         tmpIndex[0] = tmpIndex[mVisibleFunctionCount];
         tmpIndex[mVisibleFunctionCount + 1] = tmpIndex[1];
-        System.arraycopy(tmpIndex, 0, itemsIndex, 0, tmpIndex.length);
+        System.arraycopy(tmpIndex, 0, mItemsIndex, 0, tmpIndex.length);
     }
 
     @Override
@@ -774,8 +766,8 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
 
         switch (ev.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
-                continueScrollFlag = false;
-                isAlreadyMoveOutOfBoundary = false;
+                mContinueScrollDelayCallBackFlag = false;
+                mIsAlreadyMoveOutOfBoundary = false;
                 mMotionEvent = MotionEvent.obtain(ev);
                 break;
             default:
@@ -786,7 +778,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     }
 
     private boolean checkMove(float x, float y, float oldX, float oldy) {
-        return sqrt(pow(abs(x - oldX), 2) + pow(abs(y - oldy), 2)) > mSlopeDistance;
+        return pow(abs(x - oldX), 2) + pow(abs(y - oldy), 2) > pow(mSlopeDistance, 2);
     }
 
 
@@ -803,7 +795,7 @@ public class CenterSelectedSwipeLayout extends HorizontalScrollView implements V
     final public void jumpToIndex(int index) {
         if (index != FIX_MID_ITEM_INDEX - 1) {
             if (mOnItemChangeListener != null) {
-                mOnItemChangeListener.onItemClick(itemsIndex[index + 1] - 1);
+                mOnItemChangeListener.onItemClick(mItemsIndex[index + 1] - 1);
             }
             resortArray(index);
         }
